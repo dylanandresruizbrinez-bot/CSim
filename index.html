@@ -204,7 +204,33 @@ movimientos.forEach((m,i)=>{
 
  prediccion(valores);
 }
+function activarHover(){
+  const mensajes = document.querySelectorAll('#listaMovimientos .mov-item');
 
+  mensajes.forEach(mensaje => {
+    mensaje.addEventListener('mouseenter', () => {
+      mensajes.forEach(m => {
+        if (m === mensaje) {
+          m.style.transform = 'scale(1.05)';
+          m.style.transition = 'transform 0.25s ease';
+          m.style.zIndex = 10;
+        } else {
+          m.style.transform = 'scale(0.95)';
+          m.style.transition = 'transform 0.25s ease';
+          m.style.opacity = 0.6;
+        }
+      });
+    });
+
+    mensaje.addEventListener('mouseleave', () => {
+      mensajes.forEach(m => {
+        m.style.transform = 'scale(1)';
+        m.style.opacity = 1;
+        m.style.zIndex = 1;
+      });
+    });
+  });
+}
 function prediccion(vals){
  if(vals.length < 2) return;
 

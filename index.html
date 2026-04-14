@@ -67,10 +67,7 @@ canvas{margin-top:10px}
 </div>
 
 <script>
- datasets: [{
-  label: 'Datos financieros',
-  data: Object.values(porFecha)
-}]
+
 let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
 let presupuestos = JSON.parse(localStorage.getItem('presupuestos')) || {};
 let lineChart, barChart;
@@ -81,18 +78,25 @@ function guardar(){
 }
 
 function agregar(){
- let tipo = tipo.value;
- let categoria = categoria.value;
- let monto = parseFloat(monto.value);
- let interes = parseFloat(interes.value)||0;
- let fecha = fecha.value;
- if(!fecha||isNaN(monto))return;
+ let tipo = document.getElementById('tipo').value;
+ let categoria = document.getElementById('categoria').value;
+ let monto = parseFloat(document.getElementById('monto').value);
+ let interes = parseFloat(document.getElementById('interes').value) || 0;
+ let fecha = document.getElementById('fecha').value;
+
+ if(!fecha || isNaN(monto)) return;
+
  movimientos.push({tipo,categoria,monto,interes,fecha});
- guardar(); render();
-}
+
+ // limpiar inputs (esto debe ir aquí, no fuera)
  document.getElementById('monto').value = '';
-document.getElementById('interes').value = '';
-document.getElementById('fecha').value = '';
+ document.getElementById('interes').value = '';
+ document.getElementById('fecha').value = '';
+
+ guardar();
+ render();
+}
+
 
 function setPresupuesto(){
  let cat = catPresupuesto.value;
@@ -125,17 +129,29 @@ function render(){
 
  // linea temporal
  if(lineChart) lineChart.destroy();
- lineChart = new Chart(lineChartEl,{
-   type:'line',
-   data:{labels:Object.keys(porFecha),datasets:[{data:Object.values(porFecha)}]}
- });
+lineChart = new Chart(lineChartEl,{
+  type:'line',
+  data:{
+    labels:Object.keys(porFecha),
+    datasets:[{
+      label:'Flujo de dinero',
+      data:Object.values(porFecha)
+    }]
+  }
+});
 
  // barras categorias
  if(barChart) barChart.destroy();
- barChart = new Chart(barChartEl,{
-   type:'bar',
-   data:{labels:Object.keys(porCat),datasets:[{data:Object.values(porCat)}]}
- });
+barChart = new Chart(barChartEl,{
+  type:'bar',
+  data:{
+    labels:Object.keys(porCat),
+    datasets:[{
+      label:'Gastos por categoría',
+      data:Object.values(porCat)
+    }]
+  }
+});
 
  prediccion(porFecha);
 }

@@ -125,9 +125,19 @@ function setPresupuesto(){
 }
 
 function render(){
+ let desde = document.getElementById('desde')?.value;
+let hasta = document.getElementById('hasta')?.value;
+
+// FILTRADO
+let filtrados = movimientos.filter(m => {
+  if(!desde && !hasta) return true;
+  if(desde && m.fecha < desde) return false;
+  if(hasta && m.fecha > hasta) return false;
+  return true;
+});
  let porFecha = {}, porCat = {}, alertaTxt = "";
 
- movimientos.forEach(m => {
+ filtrados.forEach(m => {
    let val = m.tipo === 'deuda'
      ? m.monto * Math.pow(1 + m.interes / 100, 3)
      : m.monto;
@@ -147,7 +157,7 @@ activarHover();
 let cont = document.getElementById('listaMovimientos');
 cont.innerHTML = '';
 
-movimientos.forEach((m,i)=>{
+filtrados.forEach((m,i)=>{
 
   let tipoClass = m.tipo === 'ingreso' ? '' : 'usuario';
 
@@ -185,9 +195,13 @@ movimientos.forEach((m,i)=>{
      data:{
        labels: fechas,
        datasets:[{
-         label:'Flujo de dinero',
-         data: valores
-       }]
+  label:'Flujo de dinero',
+  data: valores,
+  borderColor: valores.map(v => v >= 0 ? '#00c853' : '#ff5252'),
+  segment: {
+    borderColor: ctx => ctx.p1.parsed.y >= 0 ? '#00c853' : '#ff5252'
+  }
+}]
      }
    });
 
@@ -197,10 +211,11 @@ movimientos.forEach((m,i)=>{
      type:'bar',
      data:{
        labels:Object.keys(porCat),
-       datasets:[{
-         label:'Categorías',
-         data:Object.values(porCat)
-       }]
+      datasets:[{
+  label:'Categorías',
+  data:Object.values(porCat),
+  backgroundColor: Object.values(porCat).map(v => v >= 0 ? '#00c853' : '#ff5252')
+}]
      }
    });
 

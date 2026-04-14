@@ -133,9 +133,10 @@ lineChart = new Chart(lineChartEl,{
   type:'line',
   data:{
     labels:Object.keys(porFecha),
-    datasets:[{
-      label:'Flujo de dinero',
-      data:Object.values(porFecha)
+   datasets:[{
+  label: 'Flujo de dinero',
+  data: Object.values(porFecha)
+}]
     }]
   }
 });
@@ -146,9 +147,11 @@ barChart = new Chart(barChartEl,{
   type:'bar',
   data:{
     labels:Object.keys(porCat),
-    datasets:[{
-      label:'Gastos por categoría',
-      data:Object.values(porCat)
+datasets:[{
+  label: 'Categorías',
+  data: Object.values(porCat)
+}]
+}]
     }]
   }
 });

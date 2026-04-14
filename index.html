@@ -144,16 +144,29 @@ function render(){
 
  document.getElementById('alerta').textContent = alertaTxt;
 
- let cont = document.getElementById('listaMovimientos');
- cont.innerHTML = '';
+let cont = document.getElementById('listaMovimientos');
+cont.innerHTML = '';
 
- movimientos.forEach((m,i)=>{
-   cont.innerHTML += `
-   <div class="mov-item">
-     <span>${m.tipo} | ${m.categoria} | $${m.monto}</span>
-     <button onclick="eliminarMovimiento(${i})">X</button>
-   </div>`;
- });
+movimientos.forEach((m,i)=>{
+
+  let tipoClass = m.tipo === 'ingreso' ? '' : 'usuario';
+
+  cont.innerHTML += `
+  <div class="mov-item ${tipoClass}">
+    
+    <div class="avatar">
+      ${m.tipo.charAt(0).toUpperCase()}
+    </div>
+
+    <div class="cuerpo">
+      <div><strong>${m.tipo.toUpperCase()}</strong> - ${m.categoria}</div>
+      <div>$${m.monto} | ${m.fecha}</div>
+      <button class="delete-btn" onclick="eliminarMovimiento(${i})">Eliminar</button>
+    </div>
+
+  </div>
+  `;
+});
 
  let fechas = Object.keys(porFecha).sort();
  let valores = fechas.map(f => porFecha[f]);

@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coin Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:'Inter',sans-serif;background:#0d0d0d;color:#fff;margin:0;padding:10px}
+.container{max-width:520px;margin:auto}
+h1{text-align:center;color:#00c853}
+.card{background:#1c1c1c;padding:12px;border-radius:12px;margin-top:10px}
+input,select,button{width:100%;padding:10px;margin-top:6px;border:none;border-radius:8px}
+button{background:#00c853;color:white;font-weight:bold}
+canvas{margin-top:10px}
+.alert{color:#ff5252;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Coin Simulator</h1>
+
+<div class="card">
+<select id="tipo">
+<option value="ingreso">Ingreso</option>
+<option value="gasto">Gasto</option>
+<option value="deuda">Deuda</option>
+</select>
+<select id="categoria">
+<option value="General">General</option>
+<option value="Comida">Comida</option>
+<option value="Transporte">Transporte</option>
+<option value="Ocio">Ocio</option>
+</select>
+<input type="number" id="monto" placeholder="Monto">
+<input type="number" id="interes" placeholder="Interés %">
+<input type="date" id="fecha">
+<button onclick="agregar()">Agregar</button>
+</div>
+
+<div class="card">
+<h3>Presupuesto por categoría</h3>
+<input type="text" id="catPresupuesto" placeholder="Categoría">
+<input type="number" id="limite" placeholder="Límite">
+<button onclick="setPresupuesto()">Guardar límite</button>
+</div>
+
+<div class="card">
+<h3>Gráfica temporal</h3>
+<canvas id="lineChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Gráfica categorías</h3>
+<canvas id="barChart"></canvas>
+</div>
+
+<div class="card">
+<h3>Predicción</h3>
+<p id="prediccion"></p>
+</div>
+
+<p id="alerta" class="alert"></p>
+
+</div>
+
+<script>
+let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+let presupuestos = JSON.parse(localStorage.getItem('presupuestos')) || {};
+let lineChart, barChart;
+
+function guardar(){
+ localStorage.setItem('movimientos', JSON.stringify(movimientos));
+ localStorage.setItem('presupuestos', JSON.stringify(presupuestos));
+}
+
+function agregar(){
+ let tipo = tipo.value;
+ let categoria = categoria.value;
+ let monto = parseFloat(monto.value);
+ let interes = parseFloat(interes.value)||0;
+ let fecha = fecha.value;
+ if(!fecha||isNaN(monto))return;
+ movimientos.push({tipo,categoria,monto,interes,fecha});
+ guardar(); render();
+}
+
+function setPresupuesto(){
+ let cat = catPresupuesto.value;
+ let lim = parseFloat(limite.value);
+ if(cat && !isNaN(lim)){
+   presupuestos[cat]=lim;
+   guardar(); render();
+ }
+}
+
+function render(){
+ let porFecha={}, porCat={}, alertaTxt="";
+
+ movimientos.forEach(m=>{
+   let val = m.tipo==='deuda'? m.monto*Math.pow(1+m.interes/100,3): m.monto;
+
+   // temporal
+   porFecha[m.fecha]=(porFecha[m.fecha]||0)+(m.tipo==='ingreso'?val:-val);
+
+   // categoria
+   porCat[m.categoria]=(porCat[m.categoria]||0)+val;
+
+   // alerta presupuesto
+   if(presupuestos[m.categoria] && porCat[m.categoria]>presupuestos[m.categoria]){
+     alertaTxt = `Excediste ${m.categoria}`;
+   }
+ });
+
+ document.getElementById('alerta').textContent = alertaTxt;
+
+ // linea temporal
+ if(lineChart) lineChart.destroy();
+ lineChart = new Chart(lineChartEl,{
+   type:'line',
+   data:{labels:Object.keys(porFecha),datasets:[{data:Object.values(porFecha)}]}
+ });
+
+ // barras categorias
+ if(barChart) barChart.destroy();
+ barChart = new Chart(barChartEl,{
+   type:'bar',
+   data:{labels:Object.keys(porCat),datasets:[{data:Object.values(porCat)}]}
+ });
+
+ prediccion(porFecha);
+}
+
+function prediccion(data){
+ let vals = Object.values(data);
+ if(vals.length<2) return;
+ let tendencia = vals[vals.length-1] - vals[0];
+ let futuro = vals[vals.length-1] + tendencia;
+ document.getElementById('prediccion').textContent = `Tendencia estimada: $${futuro.toFixed(2)}`;
+}
+
+// referencias canvas
+const lineChartEl = document.getElementById('lineChart');
+const barChartEl = document.getElementById('barChart');
+
+// PWA
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('sw.js');
+}
+
+render();
+</script>
+
+</body>
+</html>

@@ -67,6 +67,10 @@ canvas{margin-top:10px}
 </div>
 
 <script>
+ datasets: [{
+  label: 'Datos financieros',
+  data: Object.values(porFecha)
+}]
 let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
 let presupuestos = JSON.parse(localStorage.getItem('presupuestos')) || {};
 let lineChart, barChart;
@@ -86,6 +90,9 @@ function agregar(){
  movimientos.push({tipo,categoria,monto,interes,fecha});
  guardar(); render();
 }
+ document.getElementById('monto').value = '';
+document.getElementById('interes').value = '';
+document.getElementById('fecha').value = '';
 
 function setPresupuesto(){
  let cat = catPresupuesto.value;

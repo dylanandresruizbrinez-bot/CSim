@@ -95,3 +95,6 @@ button{
   border-radius:6px;
   width:auto;
 }
+.mov-item{
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}

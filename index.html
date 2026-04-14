@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Coin Simulator</title>
+
+<!-- PWA opcional (no rompe si no existe) -->
+<link rel="manifest" href="manifest.json">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -124,7 +127,7 @@ function setPresupuesto(){
 function render(){
  let porFecha = {}, porCat = {}, alertaTxt = "";
 
- console.log('--- RENDER INICIO ---');
+ console.log('--- RENDER ---');
  console.log('Movimientos:', movimientos);
 
  movimientos.forEach(m => {
@@ -142,14 +145,11 @@ function render(){
    }
  });
 
- console.log('porFecha FINAL:', porFecha);
- console.log('porCat FINAL:', porCat);
-
  document.getElementById('alerta').textContent = alertaTxt;
 
- // ordenar fechas
- let fechasOrdenadas = Object.keys(porFecha).sort();
- let valoresOrdenados = fechasOrdenadas.map(f => porFecha[f]);
+ // ORDENAR FECHAS
+ let fechas = Object.keys(porFecha).sort();
+ let valores = fechas.map(f => porFecha[f]);
 
  try {
    if(lineChart) lineChart.destroy();
@@ -157,18 +157,14 @@ function render(){
    lineChart = new Chart(lineChartEl,{
      type:'line',
      data:{
-       labels: fechasOrdenadas,
+       labels: fechas,
        datasets:[{
          label:'Flujo de dinero',
-         data: valoresOrdenados
+         data: valores
        }]
      }
    });
- } catch(e){
-   console.error('Error gráfica temporal:', e);
- }
 
- try {
    if(barChart) barChart.destroy();
 
    barChart = new Chart(barChartEl,{
@@ -181,11 +177,12 @@ function render(){
        }]
      }
    });
+
  } catch(e){
-   console.error('Error gráfica categorías:', e);
+   console.error('Error en gráficas:', e);
  }
 
- prediccion(valoresOrdenados);
+ prediccion(valores);
 }
 
 function prediccion(vals){
@@ -206,8 +203,11 @@ function prediccion(vals){
 const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
+// Service Worker seguro (no rompe si falla)
 if('serviceWorker' in navigator){
- navigator.serviceWorker.register('sw.js');
+ navigator.serviceWorker.register('sw.js')
+   .then(()=>console.log('SW activo'))
+   .catch(e=>console.warn('SW error:', e));
 }
 
 render();

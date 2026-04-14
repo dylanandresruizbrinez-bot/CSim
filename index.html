@@ -1,25 +1,64 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Coin Simulator</title>
 
-<!-- PWA opcional (no rompe si no existe) -->
 <link rel="manifest" href="manifest.json">
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body{font-family:'Inter',sans-serif;background:#0d0d0d;color:#fff;margin:0;padding:10px}
+body{
+  font-family:'Inter',sans-serif;
+  background:#0d0d0d;
+  color:#fff;
+  margin:0;
+  padding:10px;
+  letter-spacing:0.2px;
+}
+
 .container{max-width:520px;margin:auto}
-h1{text-align:center;color:#00c853}
-.card{background:#1c1c1c;padding:12px;border-radius:12px;margin-top:10px}
-input,select,button{width:100%;padding:10px;margin-top:6px;border:none;border-radius:8px}
-button{background:#00c853;color:white;font-weight:bold}
+h1{text-align:center;color:#00c853;font-weight:700}
+
+.card{
+  background:#1c1c1c;
+  padding:12px;
+  border-radius:12px;
+  margin-top:10px;
+}
+
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border:none;
+  border-radius:8px;
+  font-family:'Inter',sans-serif;
+}
+
+button{background:#00c853;color:white;font-weight:700;cursor:pointer}
 canvas{margin-top:10px}
 .alert{color:#ff5252;text-align:center}
+
+.mov-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px;
+  margin-top:6px;
+  background:#2a2a2a;
+  border-radius:8px;
+  font-size:13px;
+}
+
+.mov-item button{
+  width:auto;
+  padding:5px 8px;
+  background:#ff5252;
+  font-weight:600;
+}
 </style>
 </head>
 
@@ -46,6 +85,11 @@ canvas{margin-top:10px}
 <input type="date" id="fecha">
 
 <button onclick="agregar()">Agregar</button>
+</div>
+
+<div class="card">
+<h3>Movimientos</h3>
+<div id="listaMovimientos"></div>
 </div>
 
 <div class="card">
@@ -84,6 +128,12 @@ function guardar(){
  localStorage.setItem('presupuestos', JSON.stringify(presupuestos));
 }
 
+function eliminarMovimiento(i){
+ movimientos.splice(i,1);
+ guardar();
+ render();
+}
+
 function agregar(){
  let tipo = document.getElementById('tipo').value;
  let categoria = document.getElementById('categoria').value;
@@ -102,8 +152,6 @@ function agregar(){
  }
 
  movimientos.push({tipo, categoria, monto, interes, fecha});
-
- console.log('Movimiento agregado:', {tipo, categoria, monto, interes, fecha});
 
  document.getElementById('monto').value = '';
  document.getElementById('interes').value = '';
@@ -127,9 +175,6 @@ function setPresupuesto(){
 function render(){
  let porFecha = {}, porCat = {}, alertaTxt = "";
 
- console.log('--- RENDER ---');
- console.log('Movimientos:', movimientos);
-
  movimientos.forEach(m => {
    let val = m.tipo === 'deuda'
      ? m.monto * Math.pow(1 + m.interes / 100, 3)
@@ -147,7 +192,17 @@ function render(){
 
  document.getElementById('alerta').textContent = alertaTxt;
 
- // ORDENAR FECHAS
+ let cont = document.getElementById('listaMovimientos');
+ cont.innerHTML = '';
+
+ movimientos.forEach((m,i)=>{
+   cont.innerHTML += `
+   <div class="mov-item">
+     <span>${m.tipo} | ${m.categoria} | $${m.monto}</span>
+     <button onclick="eliminarMovimiento(${i})">X</button>
+   </div>`;
+ });
+
  let fechas = Object.keys(porFecha).sort();
  let valores = fechas.map(f => porFecha[f]);
 
@@ -203,7 +258,6 @@ function prediccion(vals){
 const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
-// Service Worker seguro (no rompe si falla)
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('sw.js')
    .then(()=>console.log('SW activo'))

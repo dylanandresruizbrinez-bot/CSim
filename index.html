@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <link rel="manifest" href="manifest.json">
@@ -7,6 +7,7 @@
 <title>Coin Simulator</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{font-family:'Inter',sans-serif;background:#0d0d0d;color:#fff;margin:0;padding:10px}
 .container{max-width:520px;margin:auto}
@@ -18,6 +19,7 @@ canvas{margin-top:10px}
 .alert{color:#ff5252;text-align:center}
 </style>
 </head>
+
 <body>
 <div class="container">
 <h1>Coin Simulator</h1>
@@ -28,15 +30,18 @@ canvas{margin-top:10px}
 <option value="gasto">Gasto</option>
 <option value="deuda">Deuda</option>
 </select>
+
 <select id="categoria">
 <option value="General">General</option>
 <option value="Comida">Comida</option>
 <option value="Transporte">Transporte</option>
 <option value="Ocio">Ocio</option>
 </select>
+
 <input type="number" id="monto" placeholder="Monto">
 <input type="number" id="interes" placeholder="Interés %">
 <input type="date" id="fecha">
+
 <button onclick="agregar()">Agregar</button>
 </div>
 
@@ -67,7 +72,6 @@ canvas{margin-top:10px}
 </div>
 
 <script>
-
 let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
 let presupuestos = JSON.parse(localStorage.getItem('presupuestos')) || {};
 let lineChart, barChart;
@@ -84,11 +88,20 @@ function agregar(){
  let interes = parseFloat(document.getElementById('interes').value) || 0;
  let fecha = document.getElementById('fecha').value;
 
- if(!fecha || isNaN(monto)) return;
+ if(isNaN(monto) || monto <= 0){
+   alert('El monto debe ser mayor a 0');
+   return;
+ }
+
+ if(!fecha){
+   alert('Debes seleccionar una fecha');
+   return;
+ }
 
  movimientos.push({tipo, categoria, monto, interes, fecha});
 
- // limpiar inputs
+ console.log('Movimiento agregado:', {tipo, categoria, monto, interes, fecha});
+
  document.getElementById('monto').value = '';
  document.getElementById('interes').value = '';
  document.getElementById('fecha').value = '';
@@ -97,81 +110,102 @@ function agregar(){
  render();
 }
 
-
 function setPresupuesto(){
- let cat = catPresupuesto.value;
- let lim = parseFloat(limite.value);
+ let cat = document.getElementById('catPresupuesto').value.trim();
+ let lim = parseFloat(document.getElementById('limite').value);
+
  if(cat && !isNaN(lim)){
-   presupuestos[cat]=lim;
-   guardar(); render();
+   presupuestos[cat] = lim;
+   guardar();
+   render();
  }
 }
 
 function render(){
- let porFecha={}, porCat={}, alertaTxt="";
+ let porFecha = {}, porCat = {}, alertaTxt = "";
 
- movimientos.forEach(m=>{
-   let val = m.tipo==='deuda'? m.monto*Math.pow(1+m.interes/100,3): m.monto;
+ console.log('--- RENDER INICIO ---');
+ console.log('Movimientos:', movimientos);
 
-   // temporal
-   porFecha[m.fecha]=(porFecha[m.fecha]||0)+(m.tipo==='ingreso'?val:-val);
+ movimientos.forEach(m => {
+   let val = m.tipo === 'deuda'
+     ? m.monto * Math.pow(1 + m.interes / 100, 3)
+     : m.monto;
 
-   // categoria
-   porCat[m.categoria]=(porCat[m.categoria]||0)+val;
+   let signed = (m.tipo === 'ingreso') ? val : -val;
 
-   // alerta presupuesto
-   if(presupuestos[m.categoria] && porCat[m.categoria]>presupuestos[m.categoria]){
+   porFecha[m.fecha] = (porFecha[m.fecha] || 0) + signed;
+   porCat[m.categoria] = (porCat[m.categoria] || 0) + signed;
+
+   if(presupuestos[m.categoria] && Math.abs(porCat[m.categoria]) > presupuestos[m.categoria]){
      alertaTxt = `Excediste ${m.categoria}`;
    }
  });
 
+ console.log('porFecha FINAL:', porFecha);
+ console.log('porCat FINAL:', porCat);
+
  document.getElementById('alerta').textContent = alertaTxt;
 
- // linea temporal
- if(lineChart) lineChart.destroy();
-lineChart = new Chart(lineChartEl,{
-  type:'line',
-  data:{
-    labels:Object.keys(porFecha),
-   datasets:[{
-  label: 'Flujo de dinero',
-  data: Object.values(porFecha)
-}]
-    }]
-  }
-});
+ // ordenar fechas
+ let fechasOrdenadas = Object.keys(porFecha).sort();
+ let valoresOrdenados = fechasOrdenadas.map(f => porFecha[f]);
 
- // barras categorias
- if(barChart) barChart.destroy();
-barChart = new Chart(barChartEl,{
-  type:'bar',
-  data:{
-    labels:Object.keys(porCat),
-datasets:[{
-  label: 'Categorías',
-  data: Object.values(porCat)
-}]
-}]
-    }]
-  }
-});
+ try {
+   if(lineChart) lineChart.destroy();
 
- prediccion(porFecha);
+   lineChart = new Chart(lineChartEl,{
+     type:'line',
+     data:{
+       labels: fechasOrdenadas,
+       datasets:[{
+         label:'Flujo de dinero',
+         data: valoresOrdenados
+       }]
+     }
+   });
+ } catch(e){
+   console.error('Error gráfica temporal:', e);
+ }
+
+ try {
+   if(barChart) barChart.destroy();
+
+   barChart = new Chart(barChartEl,{
+     type:'bar',
+     data:{
+       labels:Object.keys(porCat),
+       datasets:[{
+         label:'Categorías',
+         data:Object.values(porCat)
+       }]
+     }
+   });
+ } catch(e){
+   console.error('Error gráfica categorías:', e);
+ }
+
+ prediccion(valoresOrdenados);
 }
 
-function prediccion(data){
- let vals = Object.values(data);
- if(vals.length<2) return;
- let tendencia = vals[vals.length-1] - vals[0];
+function prediccion(vals){
+ if(vals.length < 2) return;
+
+ let cambios = [];
+ for(let i=1;i<vals.length;i++){
+   cambios.push(vals[i]-vals[i-1]);
+ }
+
+ let tendencia = cambios.reduce((a,b)=>a+b,0)/cambios.length;
  let futuro = vals[vals.length-1] + tendencia;
- document.getElementById('prediccion').textContent = `Tendencia estimada: $${futuro.toFixed(2)}`;
+
+ document.getElementById('prediccion').textContent =
+   `Tendencia estimada: $${futuro.toFixed(2)}`;
 }
 
-// referencias canvas
 const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
-// PWA
 if('serviceWorker' in navigator){
  navigator.serviceWorker.register('sw.js');
 }

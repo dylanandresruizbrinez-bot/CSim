@@ -10,6 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+ 
 
 
 </head>
@@ -199,12 +200,19 @@ function render(){
   let fechas = Object.keys(porFecha).sort((a,b)=> new Date(a)-new Date(b));
   let valores = fechas.map(f => porFecha[f]);
 
-  if(fechas.length === 0){
-    if(lineChart) lineChart.destroy();
-    if(barChart) barChart.destroy();
-    return;
-  }
 
+if(fechas.length === 0){
+  if(lineChart) lineChart.destroy();
+  if(barChart) barChart.destroy();
+  document.getElementById('prediccion').textContent = 'Sin datos';
+  return;
+}
+ <div class="card">
+  <h3>Filtro por fecha</h3>
+  <input type="date" id="desde">
+  <input type="date" id="hasta">
+  <button onclick="render()">Aplicar filtro</button>
+</div>
   try{
 
     if(lineChart) lineChart.destroy();
@@ -212,7 +220,7 @@ function render(){
     lineChart = new Chart(lineChartEl,{
       type:'line',
       data:{
-        labels: fechas,
+       labels: fechas.map(f => new Date(f).toLocaleDateString()),
         datasets:[{
           data: valores,
           borderColor:'#00c853',
@@ -273,6 +281,7 @@ function activarHover(){
     });
   });
 }
+
 function prediccion(vals){
  if(vals.length < 2) return;
 

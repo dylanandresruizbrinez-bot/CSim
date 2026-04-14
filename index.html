@@ -8,6 +8,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
@@ -16,6 +17,7 @@
 <div class="container">
 <h1>Coin Simulator</h1>
 
+<!-- FORM -->
 <div class="card">
 <select id="tipo">
 <option value="ingreso">Ingreso</option>
@@ -23,12 +25,7 @@
 <option value="deuda">Deuda</option>
 </select>
 
-<select id="categoria">
-<option value="General">General</option>
-<option value="Comida">Comida</option>
-<option value="Transporte">Transporte</option>
-<option value="Ocio">Ocio</option>
-</select>
+<select id="categoria"></select>
 
 <input type="number" id="monto" placeholder="Monto">
 <input type="number" id="interes" placeholder="Interés %">
@@ -37,7 +34,7 @@
 <button onclick="agregar()">Agregar</button>
 </div>
 
-<!-- ✅ FILTRO (AHORA EN EL LUGAR CORRECTO) -->
+<!-- FILTRO -->
 <div class="card">
 <h3>Filtro por fecha</h3>
 <input type="date" id="desde">
@@ -45,18 +42,29 @@
 <button onclick="render()">Aplicar filtro</button>
 </div>
 
+<!-- MOVIMIENTOS -->
 <div class="card">
 <h3>Movimientos</h3>
 <div id="listaMovimientos"></div>
 </div>
 
+<!-- PRESUPUESTO -->
 <div class="card">
 <h3>Presupuesto por categoría</h3>
-<input type="text" id="catPresupuesto" placeholder="Categoría">
+<select id="catPresupuesto"></select>
 <input type="number" id="limite" placeholder="Límite">
 <button onclick="setPresupuesto()">Guardar límite</button>
 </div>
 
+<!-- EXCEL -->
+<div class="card">
+<h3>Excel</h3>
+<button onclick="exportarExcel()">Exportar</button>
+<input type="file" id="inputExcel">
+<button onclick="importarExcel()">Importar</button>
+</div>
+
+<!-- GRÁFICAS -->
 <div class="card">
 <h3>Gráfica temporal</h3>
 <canvas id="lineChart"></canvas>
@@ -81,6 +89,44 @@ let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
 let presupuestos = JSON.parse(localStorage.getItem('presupuestos')) || {};
 let lineChart, barChart;
 
+/* 🔥 CATEGORÍAS DINÁMICAS */
+const categoriasPorTipo = {
+  ingreso: ["Empresa/Trabajo", "Cobro de deuda", "General"],
+  gasto: ["Comida", "Transporte", "Ocio", "Servicio"],
+  deuda: ["Pago de deuda", "General"]
+};
+
+function actualizarCategorias(){
+  const tipo = document.getElementById('tipo').value;
+  const select = document.getElementById('categoria');
+  select.innerHTML = '';
+
+  categoriasPorTipo[tipo].forEach(cat=>{
+    let op = document.createElement('option');
+    op.value = cat;
+    op.textContent = cat;
+    select.appendChild(op);
+  });
+}
+
+function cargarCategoriasPresupuesto(){
+  const select = document.getElementById('catPresupuesto');
+  const todas = new Set();
+
+  Object.values(categoriasPorTipo).forEach(lista=>{
+    lista.forEach(cat=>todas.add(cat));
+  });
+
+  select.innerHTML = '';
+  todas.forEach(cat=>{
+    let op = document.createElement('option');
+    op.value = cat;
+    op.textContent = cat;
+    select.appendChild(op);
+  });
+}
+
+/* CORE */
 function guardar(){
  localStorage.setItem('movimientos', JSON.stringify(movimientos));
  localStorage.setItem('presupuestos', JSON.stringify(presupuestos));
@@ -99,32 +145,25 @@ function agregar(){
  let interes = parseFloat(document.getElementById('interes').value) || 0;
  let fecha = document.getElementById('fecha').value;
 
- if(isNaN(monto) || monto <= 0){
-   alert('El monto debe ser mayor a 0');
-   return;
- }
-
- if(!fecha){
-   alert('Debes seleccionar una fecha');
-   return;
- }
+ if(isNaN(monto) || monto <= 0) return alert('Monto inválido');
+ if(!fecha) return alert('Selecciona fecha');
 
  movimientos.push({tipo, categoria, monto, interes, fecha});
 
- document.getElementById('monto').value = '';
- document.getElementById('interes').value = '';
- document.getElementById('fecha').value = '';
+ document.getElementById('monto').value='';
+ document.getElementById('interes').value='';
+ document.getElementById('fecha').value='';
 
  guardar();
  render();
 }
 
 function setPresupuesto(){
- let cat = document.getElementById('catPresupuesto').value.trim();
+ let cat = document.getElementById('catPresupuesto').value;
  let lim = parseFloat(document.getElementById('limite').value);
 
- if(cat && !isNaN(lim)){
-   presupuestos[cat] = lim;
+ if(!isNaN(lim)){
+   presupuestos[cat]=lim;
    guardar();
    render();
  }
@@ -132,219 +171,138 @@ function setPresupuesto(){
 
 function render(){
 
-  let desde = document.getElementById('desde')?.value;
-  let hasta = document.getElementById('hasta')?.value;
+ let desde = document.getElementById('desde').value;
+ let hasta = document.getElementById('hasta').value;
 
-  let filtrados = movimientos.filter(m => {
-    if(!desde && !hasta) return true;
-    if(desde && m.fecha < desde) return false;
-    if(hasta && m.fecha > hasta) return false;
-    return true;
-  });
+ let filtrados = movimientos.filter(m=>{
+   if(desde && m.fecha < desde) return false;
+   if(hasta && m.fecha > hasta) return false;
+   return true;
+ });
 
-  let porFecha = {}, porCat = {}, alertaTxt = "";
+ let porFecha={}, porCat={}, alertaTxt="";
 
-  filtrados.forEach(m => {
-    let val = m.tipo === 'deuda'
-      ? m.monto * Math.pow(1 + m.interes / 100, 3)
-      : m.monto;
+ filtrados.forEach(m=>{
+   let val = m.tipo==='deuda'
+     ? m.monto*Math.pow(1+m.interes/100,3)
+     : m.monto;
 
-    let signed = (m.tipo === 'ingreso') ? val : -val;
+   let signed = m.tipo==='ingreso'?val:-val;
 
-    porFecha[m.fecha] = (porFecha[m.fecha] || 0) + signed;
-    porCat[m.categoria] = (porCat[m.categoria] || 0) + signed;
+   porFecha[m.fecha]=(porFecha[m.fecha]||0)+signed;
+   porCat[m.categoria]=(porCat[m.categoria]||0)+signed;
 
-    if(presupuestos[m.categoria] && Math.abs(porCat[m.categoria]) > presupuestos[m.categoria]){
-      alertaTxt = `Excediste ${m.categoria}`;
-    }
-  });
+   if(presupuestos[m.categoria] && Math.abs(porCat[m.categoria])>presupuestos[m.categoria]){
+     alertaTxt=`Excediste ${m.categoria}`;
+   }
+ });
 
-  document.getElementById('alerta').textContent = alertaTxt;
+ document.getElementById('alerta').textContent=alertaTxt;
 
-  let cont = document.getElementById('listaMovimientos');
-  cont.innerHTML = '';
+ /* LISTA */
+ let cont = document.getElementById('listaMovimientos');
+ cont.innerHTML='';
 
-  filtrados.forEach(m => {
+ filtrados.forEach(m=>{
+   let i = movimientos.indexOf(m);
 
-    const originalIndex = movimientos.indexOf(m);
+   let div = document.createElement('div');
+   div.className='mov-item';
 
-    const item = document.createElement('div');
-    item.className = 'mov-item ' + (m.tipo === 'ingreso' ? '' : 'usuario');
+   div.innerHTML=`
+     <div class="avatar">${m.tipo[0].toUpperCase()}</div>
+     <div class="cuerpo">
+       <strong>${m.tipo.toUpperCase()}</strong> - ${m.categoria}<br>
+       $${m.monto} | ${m.fecha}<br>
+       <button onclick="eliminarMovimiento(${i})">Eliminar</button>
+     </div>
+   `;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'avatar';
-    avatar.textContent = m.tipo.charAt(0).toUpperCase();
+   cont.appendChild(div);
+ });
 
-    const cuerpo = document.createElement('div');
-    cuerpo.className = 'cuerpo';
+ /* DATOS */
+ let fechas = Object.keys(porFecha).sort((a,b)=>new Date(a)-new Date(b));
+ let valores = fechas.map(f=>porFecha[f]);
 
-    const linea1 = document.createElement('div');
-    linea1.innerHTML = `<strong>${m.tipo.toUpperCase()}</strong> - ${m.categoria}`;
+ if(!fechas.length){
+   if(lineChart) lineChart.destroy();
+   if(barChart) barChart.destroy();
+   return;
+ }
 
-    const linea2 = document.createElement('div');
-    linea2.textContent = `$${m.monto} | ${m.fecha}`;
+ /* CHARTS */
+ if(lineChart) lineChart.destroy();
+ lineChart = new Chart(lineChartEl,{
+   type:'line',
+   data:{
+     labels: fechas,
+     datasets:[{
+       data: valores,
+       borderColor:'#00c853',
+       segment:{
+         borderColor: ctx => ctx.p1.parsed.y>=0 ? '#00c853' : '#ff5252'
+       }
+     }]
+   }
+ });
 
-    const btn = document.createElement('button');
-    btn.className = 'delete-btn';
-    btn.textContent = 'Eliminar';
-    btn.onclick = () => eliminarMovimiento(originalIndex);
+ if(barChart) barChart.destroy();
+ barChart = new Chart(barChartEl,{
+   type:'bar',
+   data:{
+     labels:Object.keys(porCat),
+     datasets:[{
+       data:Object.values(porCat),
+       backgroundColor:Object.values(porCat).map(v=>v>=0?'#00c853':'#ff5252')
+     }]
+   }
+ });
 
-    cuerpo.appendChild(linea1);
-    cuerpo.appendChild(linea2);
-    cuerpo.appendChild(btn);
-
-    item.appendChild(avatar);
-    item.appendChild(cuerpo);
-    cont.appendChild(item);
-  });
-
-  activarHover();
-
-  let fechas = Object.keys(porFecha).sort((a,b)=> new Date(a)-new Date(b));
-  let valores = fechas.map(f => porFecha[f]);
-
-  if(fechas.length === 0){
-    if(lineChart) lineChart.destroy();
-    if(barChart) barChart.destroy();
-    document.getElementById('prediccion').textContent = 'Sin datos';
-    return;
-  }
-
-  try{
-    if(lineChart) lineChart.destroy();
-
-    lineChart = new Chart(lineChartEl,{
-      type:'line',
-      data:{
-        labels: fechas.map(f => new Date(f).toLocaleDateString()),
-        datasets:[{
-          data: valores,
-          borderColor:'#00c853',
-          segment:{
-            borderColor: ctx => ctx.p1.parsed.y >= 0 ? '#00c853' : '#ff5252'
-          },
-          tension:0.3
-        }]
-      }
-    });
-
-    if(barChart) barChart.destroy();
-
-    const cats = Object.keys(porCat);
-    const vals = Object.values(porCat);
-
-    barChart = new Chart(barChartEl,{
-      type:'bar',
-      data:{
-        labels: cats,
-        datasets:[{
-          data: vals,
-          backgroundColor: vals.map(v => v >= 0 ? '#00c853' : '#ff5252')
-        }]
-      }
-    });
-
-  }catch(e){
-    console.error('Charts rotos:', e);
-  }
-
-  prediccion(valores);
-}
-
-function activarHover(){
-  const mensajes = document.querySelectorAll('#listaMovimientos .mov-item');
-
-  mensajes.forEach(mensaje => {
-    mensaje.addEventListener('mouseenter', () => {
-      mensajes.forEach(m => {
-        m.style.transform = m === mensaje ? 'scale(1.05)' : 'scale(0.95)';
-        m.style.opacity = m === mensaje ? 1 : 0.6;
-      });
-    });
-
-    mensaje.addEventListener('mouseleave', () => {
-      mensajes.forEach(m => {
-        m.style.transform = 'scale(1)';
-        m.style.opacity = 1;
-      });
-    });
-  });
+ prediccion(valores);
 }
 
 function prediccion(vals){
- if(vals.length < 2) return;
-
- let cambios = [];
- for(let i=1;i<vals.length;i++){
-   cambios.push(vals[i]-vals[i-1]);
- }
-
- let tendencia = cambios.reduce((a,b)=>a+b,0)/cambios.length;
- let futuro = vals[vals.length-1] + tendencia;
-
- document.getElementById('prediccion').textContent =
-   `Tendencia estimada: $${futuro.toFixed(2)}`;
+ if(vals.length<2) return;
+ let tendencia = (vals[vals.length-1]-vals[0])/vals.length;
+ let futuro = vals[vals.length-1]+tendencia;
+ document.getElementById('prediccion').textContent=`$${futuro.toFixed(2)}`;
 }
+
+/* EXCEL */
+function exportarExcel(){
+ const ws = XLSX.utils.json_to_sheet(movimientos);
+ const wb = XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+ XLSX.writeFile(wb, "datos.xlsx");
+}
+
+function importarExcel(){
+ const file = document.getElementById('inputExcel').files[0];
+ const reader = new FileReader();
+
+ reader.onload = e=>{
+   const data = new Uint8Array(e.target.result);
+   const wb = XLSX.read(data,{type:'array'});
+   const ws = wb.Sheets[wb.SheetNames[0]];
+   movimientos = XLSX.utils.sheet_to_json(ws);
+   guardar();
+   render();
+ };
+
+ reader.readAsArrayBuffer(file);
+}
+
+/* INIT */
+document.getElementById('tipo').addEventListener('change', actualizarCategorias);
 
 const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
+actualizarCategorias();
+cargarCategoriasPresupuesto();
 render();
- function exportarExcel(){
-  if(movimientos.length === 0){
-    alert("No hay datos para exportar");
-    return;
-  }
-
-  const data = movimientos.map(m => ({
-    Tipo: m.tipo,
-    Categoria: m.categoria,
-    Monto: m.monto,
-    Interes: m.interes,
-    Fecha: m.fecha
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
-
-  XLSX.writeFile(wb, "coin_simulator.xlsx");
-}
- function importarExcel(){
-  const file = document.getElementById('inputExcel').files[0];
-
-  if(!file){
-    alert("Selecciona un archivo");
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.onload = function(e){
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, {type: 'array'});
-
-    const hoja = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(hoja);
-
-    // convertir al formato del sistema
-    movimientos = json.map(row => ({
-      tipo: (row.Tipo || "").toLowerCase(),
-      categoria: row.Categoria || "General",
-      monto: parseFloat(row.Monto) || 0,
-      interes: parseFloat(row.Interes) || 0,
-      fecha: row.Fecha || ""
-    }));
-
-    guardar();
-    render();
-  };
-
-  reader.readAsArrayBuffer(file);
-}
 </script>
 
 </body>
- <input type="file" id="inputExcel" accept=".xlsx, .xls">
-<button onclick="importarExcel()">Importar Excel</button>
 </html>

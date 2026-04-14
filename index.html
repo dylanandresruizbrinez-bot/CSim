@@ -6,13 +6,10 @@
 
 <title>Coin Simulator</title>
 
-<!-- <link rel="manifest" href="manifest.json"> -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
- 
-
-
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -38,6 +35,14 @@
 <input type="date" id="fecha">
 
 <button onclick="agregar()">Agregar</button>
+</div>
+
+<!-- ✅ FILTRO (AHORA EN EL LUGAR CORRECTO) -->
+<div class="card">
+<h3>Filtro por fecha</h3>
+<input type="date" id="desde">
+<input type="date" id="hasta">
+<button onclick="render()">Aplicar filtro</button>
 </div>
 
 <div class="card">
@@ -129,12 +134,6 @@ function render(){
 
   let desde = document.getElementById('desde')?.value;
   let hasta = document.getElementById('hasta')?.value;
- <div class="card">
-  <h3>Filtro por fecha</h3>
-  <input type="date" id="desde">
-  <input type="date" id="hasta">
-  <button onclick="render()">Aplicar filtro</button>
-</div>
 
   let filtrados = movimientos.filter(m => {
     if(!desde && !hasta) return true;
@@ -162,7 +161,6 @@ function render(){
 
   document.getElementById('alerta').textContent = alertaTxt;
 
-  // LISTA
   let cont = document.getElementById('listaMovimientos');
   cont.innerHTML = '';
 
@@ -202,26 +200,23 @@ function render(){
 
   activarHover();
 
-  // DATOS ORDENADOS
   let fechas = Object.keys(porFecha).sort((a,b)=> new Date(a)-new Date(b));
   let valores = fechas.map(f => porFecha[f]);
 
-
-if(fechas.length === 0){
-  if(lineChart) lineChart.destroy();
-  if(barChart) barChart.destroy();
-  document.getElementById('prediccion').textContent = 'Sin datos';
-  return;
-}
+  if(fechas.length === 0){
+    if(lineChart) lineChart.destroy();
+    if(barChart) barChart.destroy();
+    document.getElementById('prediccion').textContent = 'Sin datos';
+    return;
+  }
 
   try{
-
     if(lineChart) lineChart.destroy();
 
     lineChart = new Chart(lineChartEl,{
       type:'line',
       data:{
-       labels: fechas.map(f => new Date(f).toLocaleDateString()),
+        labels: fechas.map(f => new Date(f).toLocaleDateString()),
         datasets:[{
           data: valores,
           borderColor:'#00c853',
@@ -255,21 +250,15 @@ if(fechas.length === 0){
 
   prediccion(valores);
 }
+
 function activarHover(){
   const mensajes = document.querySelectorAll('#listaMovimientos .mov-item');
 
   mensajes.forEach(mensaje => {
     mensaje.addEventListener('mouseenter', () => {
       mensajes.forEach(m => {
-        if (m === mensaje) {
-          m.style.transform = 'scale(1.05)';
-          m.style.transition = 'transform 0.25s ease';
-          m.style.zIndex = 10;
-        } else {
-          m.style.transform = 'scale(0.95)';
-          m.style.transition = 'transform 0.25s ease';
-          m.style.opacity = 0.6;
-        }
+        m.style.transform = m === mensaje ? 'scale(1.05)' : 'scale(0.95)';
+        m.style.opacity = m === mensaje ? 1 : 0.6;
       });
     });
 
@@ -277,7 +266,6 @@ function activarHover(){
       mensajes.forEach(m => {
         m.style.transform = 'scale(1)';
         m.style.opacity = 1;
-        m.style.zIndex = 1;
       });
     });
   });
@@ -301,14 +289,62 @@ function prediccion(vals){
 const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
-if('serviceWorker' in navigator){
-// navigator.serviceWorker.register('sw.js')
-   .then(()=>console.log('SW activo'))
-   .catch(e=>console.warn('SW error:', e));
-}
-
 render();
+ function exportarExcel(){
+  if(movimientos.length === 0){
+    alert("No hay datos para exportar");
+    return;
+  }
+
+  const data = movimientos.map(m => ({
+    Tipo: m.tipo,
+    Categoria: m.categoria,
+    Monto: m.monto,
+    Interes: m.interes,
+    Fecha: m.fecha
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+
+  XLSX.writeFile(wb, "coin_simulator.xlsx");
+}
+ function importarExcel(){
+  const file = document.getElementById('inputExcel').files[0];
+
+  if(!file){
+    alert("Selecciona un archivo");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e){
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, {type: 'array'});
+
+    const hoja = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(hoja);
+
+    // convertir al formato del sistema
+    movimientos = json.map(row => ({
+      tipo: (row.Tipo || "").toLowerCase(),
+      categoria: row.Categoria || "General",
+      monto: parseFloat(row.Monto) || 0,
+      interes: parseFloat(row.Interes) || 0,
+      fecha: row.Fecha || ""
+    }));
+
+    guardar();
+    render();
+  };
+
+  reader.readAsArrayBuffer(file);
+}
 </script>
 
 </body>
+ <input type="file" id="inputExcel" accept=".xlsx, .xls">
+<button onclick="importarExcel()">Importar Excel</button>
 </html>

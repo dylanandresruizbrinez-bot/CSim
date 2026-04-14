@@ -1,0 +1,97 @@
+:root {
+  --bg: #0d0d0d;
+  --user-msg: rgba(45, 27, 2, 0.4);
+  --accent: #ff8c00;
+  --text: #d1d1d1;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h1 {
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 700px;
+  margin-bottom: 20px;
+}
+
+/* INPUTS */
+input,select,button{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  border-radius:10px;
+  border:none;
+  background:#111;
+  color:var(--text);
+}
+
+button{
+  background: var(--accent);
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* LISTA TIPO CHAT */
+#listaMovimientos{
+  display:flex;
+  flex-direction:column;
+  gap:15px;
+}
+
+.mov-item{
+  display:flex;
+  gap:15px;
+  align-items:flex-start;
+}
+
+.mov-item.usuario{
+  flex-direction:row-reverse;
+}
+
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+  background: var(--accent);
+  color:black;
+  flex-shrink:0;
+}
+
+.cuerpo{
+  padding:12px 16px;
+  border-radius:15px;
+  line-height:1.5;
+  background: var(--user-msg);
+  border:1px solid rgba(255,140,0,0.2);
+  font-size:0.9rem;
+}
+
+/* BOTÓN DELETE */
+.delete-btn{
+  margin-top:5px;
+  background:#ff5252;
+  color:white;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:6px;
+  width:auto;
+}

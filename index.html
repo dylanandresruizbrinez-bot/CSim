@@ -170,6 +170,12 @@ movimientos.forEach((m,i)=>{
 
  let fechas = Object.keys(porFecha).sort();
  let valores = fechas.map(f => porFecha[f]);
+ <div class="card">
+  <h3>Filtro por fecha</h3>
+  <input type="date" id="desde">
+  <input type="date" id="hasta">
+  <button onclick="render()">Aplicar filtro</button>
+</div>
 
  try {
    if(lineChart) lineChart.destroy();

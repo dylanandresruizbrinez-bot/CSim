@@ -125,105 +125,126 @@ function setPresupuesto(){
 }
 
 function render(){
- let desde = document.getElementById('desde')?.value;
-let hasta = document.getElementById('hasta')?.value;
 
-// FILTRADO
-let filtrados = movimientos.filter(m => {
-  if(!desde && !hasta) return true;
-  if(desde && m.fecha < desde) return false;
-  if(hasta && m.fecha > hasta) return false;
-  return true;
-});
- let porFecha = {}, porCat = {}, alertaTxt = "";
+  let desde = document.getElementById('desde')?.value;
+  let hasta = document.getElementById('hasta')?.value;
 
- filtrados.forEach(m => {
-   let val = m.tipo === 'deuda'
-     ? m.monto * Math.pow(1 + m.interes / 100, 3)
-     : m.monto;
+  let filtrados = movimientos.filter(m => {
+    if(!desde && !hasta) return true;
+    if(desde && m.fecha < desde) return false;
+    if(hasta && m.fecha > hasta) return false;
+    return true;
+  });
 
-   let signed = (m.tipo === 'ingreso') ? val : -val;
+  let porFecha = {}, porCat = {}, alertaTxt = "";
 
-   porFecha[m.fecha] = (porFecha[m.fecha] || 0) + signed;
-   porCat[m.categoria] = (porCat[m.categoria] || 0) + signed;
+  filtrados.forEach(m => {
+    let val = m.tipo === 'deuda'
+      ? m.monto * Math.pow(1 + m.interes / 100, 3)
+      : m.monto;
 
-   if(presupuestos[m.categoria] && Math.abs(porCat[m.categoria]) > presupuestos[m.categoria]){
-     alertaTxt = `Excediste ${m.categoria}`;
-   }
- });
-activarHover();
- document.getElementById('alerta').textContent = alertaTxt;
+    let signed = (m.tipo === 'ingreso') ? val : -val;
 
-let cont = document.getElementById('listaMovimientos');
-cont.innerHTML = '';
+    porFecha[m.fecha] = (porFecha[m.fecha] || 0) + signed;
+    porCat[m.categoria] = (porCat[m.categoria] || 0) + signed;
 
-filtrados.forEach((m,i)=>{
+    if(presupuestos[m.categoria] && Math.abs(porCat[m.categoria]) > presupuestos[m.categoria]){
+      alertaTxt = `Excediste ${m.categoria}`;
+    }
+  });
 
-  let tipoClass = m.tipo === 'ingreso' ? '' : 'usuario';
+  document.getElementById('alerta').textContent = alertaTxt;
 
-  cont.innerHTML += `
-  <div class="mov-item ${tipoClass}">
-    
-    <div class="avatar">
-      ${m.tipo.charAt(0).toUpperCase()}
-    </div>
+  // LISTA
+  let cont = document.getElementById('listaMovimientos');
+  cont.innerHTML = '';
 
-    <div class="cuerpo">
-      <div><strong>${m.tipo.toUpperCase()}</strong> - ${m.categoria}</div>
-      <div>$${m.monto} | ${m.fecha}</div>
-      <button class="delete-btn" onclick="eliminarMovimiento(${i})">Eliminar</button>
-    </div>
+  filtrados.forEach(m => {
 
-  </div>
-  `;
-});
+    const originalIndex = movimientos.indexOf(m);
 
- let fechas = Object.keys(porFecha).sort();
- let valores = fechas.map(f => porFecha[f]);
- <div class="card">
-  <h3>Filtro por fecha</h3>
-  <input type="date" id="desde">
-  <input type="date" id="hasta">
-  <button onclick="render()">Aplicar filtro</button>
-</div>
+    const item = document.createElement('div');
+    item.className = 'mov-item ' + (m.tipo === 'ingreso' ? '' : 'usuario');
 
- try {
-   if(lineChart) lineChart.destroy();
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = m.tipo.charAt(0).toUpperCase();
 
-   lineChart = new Chart(lineChartEl,{
-     type:'line',
-     data:{
-       labels: fechas,
-       datasets:[{
-  label:'Flujo de dinero',
-  data: valores,
-  borderColor: valores.map(v => v >= 0 ? '#00c853' : '#ff5252'),
-  segment: {
-    borderColor: ctx => ctx.p1.parsed.y >= 0 ? '#00c853' : '#ff5252'
+    const cuerpo = document.createElement('div');
+    cuerpo.className = 'cuerpo';
+
+    const linea1 = document.createElement('div');
+    linea1.innerHTML = `<strong>${m.tipo.toUpperCase()}</strong> - ${m.categoria}`;
+
+    const linea2 = document.createElement('div');
+    linea2.textContent = `$${m.monto} | ${m.fecha}`;
+
+    const btn = document.createElement('button');
+    btn.className = 'delete-btn';
+    btn.textContent = 'Eliminar';
+    btn.onclick = () => eliminarMovimiento(originalIndex);
+
+    cuerpo.appendChild(linea1);
+    cuerpo.appendChild(linea2);
+    cuerpo.appendChild(btn);
+
+    item.appendChild(avatar);
+    item.appendChild(cuerpo);
+    cont.appendChild(item);
+  });
+
+  activarHover();
+
+  // DATOS ORDENADOS
+  let fechas = Object.keys(porFecha).sort((a,b)=> new Date(a)-new Date(b));
+  let valores = fechas.map(f => porFecha[f]);
+
+  if(fechas.length === 0){
+    if(lineChart) lineChart.destroy();
+    if(barChart) barChart.destroy();
+    return;
   }
-}]
-     }
-   });
 
-   if(barChart) barChart.destroy();
+  try{
 
-   barChart = new Chart(barChartEl,{
-     type:'bar',
-     data:{
-       labels:Object.keys(porCat),
-      datasets:[{
-  label:'Categorías',
-  data:Object.values(porCat),
-  backgroundColor: Object.values(porCat).map(v => v >= 0 ? '#00c853' : '#ff5252')
-}]
-     }
-   });
+    if(lineChart) lineChart.destroy();
 
- } catch(e){
-   console.error('Error en gráficas:', e);
- }
+    lineChart = new Chart(lineChartEl,{
+      type:'line',
+      data:{
+        labels: fechas,
+        datasets:[{
+          data: valores,
+          borderColor:'#00c853',
+          segment:{
+            borderColor: ctx => ctx.p1.parsed.y >= 0 ? '#00c853' : '#ff5252'
+          },
+          tension:0.3
+        }]
+      }
+    });
 
- prediccion(valores);
+    if(barChart) barChart.destroy();
+
+    const cats = Object.keys(porCat);
+    const vals = Object.values(porCat);
+
+    barChart = new Chart(barChartEl,{
+      type:'bar',
+      data:{
+        labels: cats,
+        datasets:[{
+          data: vals,
+          backgroundColor: vals.map(v => v >= 0 ? '#00c853' : '#ff5252')
+        }]
+      }
+    });
+
+  }catch(e){
+    console.error('Charts rotos:', e);
+  }
+
+  prediccion(valores);
 }
 function activarHover(){
   const mensajes = document.querySelectorAll('#listaMovimientos .mov-item');

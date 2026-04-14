@@ -9,7 +9,7 @@
 <!-- <link rel="manifest" href="manifest.json"> -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
  
 
 
@@ -129,6 +129,12 @@ function render(){
 
   let desde = document.getElementById('desde')?.value;
   let hasta = document.getElementById('hasta')?.value;
+ <div class="card">
+  <h3>Filtro por fecha</h3>
+  <input type="date" id="desde">
+  <input type="date" id="hasta">
+  <button onclick="render()">Aplicar filtro</button>
+</div>
 
   let filtrados = movimientos.filter(m => {
     if(!desde && !hasta) return true;
@@ -296,7 +302,7 @@ const lineChartEl = document.getElementById('lineChart');
 const barChartEl = document.getElementById('barChart');
 
 if('serviceWorker' in navigator){
- navigator.serviceWorker.register('sw.js')
+// navigator.serviceWorker.register('sw.js')
    .then(()=>console.log('SW activo'))
    .catch(e=>console.warn('SW error:', e));
 }

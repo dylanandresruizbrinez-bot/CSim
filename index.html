@@ -86,9 +86,9 @@ function agregar(){
 
  if(!fecha || isNaN(monto)) return;
 
- movimientos.push({tipo,categoria,monto,interes,fecha});
+ movimientos.push({tipo, categoria, monto, interes, fecha});
 
- // limpiar inputs (esto debe ir aquí, no fuera)
+ // limpiar inputs
  document.getElementById('monto').value = '';
  document.getElementById('interes').value = '';
  document.getElementById('fecha').value = '';

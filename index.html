@@ -77,6 +77,17 @@
 
 <div class="card">
 <h3>Predicción</h3>
+  <select id="unidadTiempo">
+  <option value="dias">Días</option>
+  <option value="semanas">Semanas</option>
+  <option value="meses">Meses</option>
+  <option value="semestres">Semestres</option>
+  <option value="años">Años</option>
+  <option value="decadas">Décadas</option>
+</select>
+
+<input type="number" id="cantidadTiempo" placeholder="Cantidad (ej: 3)">
+<button onclick="render()">Calcular</button>
 <p id="prediccion"></p>
 </div>
 
@@ -259,14 +270,44 @@ function render(){
    }
  });
 
- prediccion(valores);
+ prediccion(valores, fechas);
 }
 
-function prediccion(vals){
- if(vals.length<2) return;
- let tendencia = (vals[vals.length-1]-vals[0])/vals.length;
- let futuro = vals[vals.length-1]+tendencia;
- document.getElementById('prediccion').textContent=`$${futuro.toFixed(2)}`;
+function prediccion(vals, fechas){
+ if(vals.length < 2) return;
+
+ const unidad = document.getElementById('unidadTiempo').value;
+ const cantidad = parseInt(document.getElementById('cantidadTiempo').value) || 1;
+
+ // convertir fechas a tiempo real
+ const fechaInicio = new Date(fechas[0]);
+ const fechaFin = new Date(fechas[fechas.length - 1]);
+
+ const diasTotales = (fechaFin - fechaInicio) / (1000 * 60 * 60 * 24);
+
+ if(diasTotales === 0) return;
+
+ // tendencia diaria real
+ const tendenciaDiaria = (vals[vals.length - 1] - vals[0]) / diasTotales;
+
+ // convertir unidad a días
+ let factorDias = 1;
+
+ switch(unidad){
+   case 'dias': factorDias = 1; break;
+   case 'semanas': factorDias = 7; break;
+   case 'meses': factorDias = 30; break;
+   case 'semestres': factorDias = 182; break;
+   case 'años': factorDias = 365; break;
+   case 'decadas': factorDias = 3650; break;
+ }
+
+ const diasFuturo = factorDias * cantidad;
+
+ const futuro = vals[vals.length - 1] + (tendenciaDiaria * diasFuturo);
+
+ document.getElementById('prediccion').textContent =
+   `Proyección a ${cantidad} ${unidad}: $${futuro.toFixed(2)}`;
 }
 
 /* EXCEL */
